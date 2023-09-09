@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# this script should work as executable
 # Check for the app directories
 if [ ! -d "watchdog" ] || [ ! -d "watchdogApp" ]; then
   echo "Missing app1 or app2 directory. Please run this script from the root directory of the project."
