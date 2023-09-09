@@ -9,11 +9,13 @@ fi
 # Navigate into the first app directory and link it
 cd watchdog
 npm link
+npm install
 cd ..
 
 # Navigate into the second app directory and link the first app
 cd watchdogApp
 npm link watchdog
+npm install
 cd ..
 
 echo "Successfully linked!"
