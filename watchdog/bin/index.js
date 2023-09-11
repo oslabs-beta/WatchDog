@@ -161,6 +161,94 @@ const stopPodCheck = () => {
 };
   
 
+//METRICS SERVER
+
+async function checkMetricsServer() {
+    const api = kc.makeApiClient(k8s.ApisApi);
+    try {
+      const result = await api.getAPIVersions();
+      const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
+      console.log('metricsAPI: ', metricsAPI)
+      return Boolean(metricsAPI);
+    } catch (error) {
+      console.error("Failed to retrieve API groups:", error);
+      return false;
+    }
+  }
+  
+//   async function applyYaml(obj) {
+//     const api = kc.makeApiClient(k8s.KubernetesObjectApi);
+//     try {
+//         console.log('obj: ', obj)
+//       await api.read(obj);
+//       await api.replace(obj);
+//     } catch (err) {
+//       if (err.response && err.response.statusCode === 404) {
+//         await api.create(obj);
+//       } else {
+//         console.error('Unknown error:', err);
+//       }
+//     }
+//   }
+
+async function applyYaml(objArray) {
+    const api = kc.makeApiClient(k8s.KubernetesObjectApi);
+    objArray.forEach(async obj => {
+        console.log('doing ish')
+        console.log('length: ', objArray.length)
+        await api.create(obj)
+      try {
+        console.log('Applying object:', obj);
+        // await api.read(obj);
+        // await api.replace(obj);
+        await api.create(obj);
+        console.log('Successfully replaced object');
+      } catch (err) {
+        if (err.response && err.response.statusCode === 404) {
+          await api.create(obj);
+          console.log('Successfully created object');
+        } else {
+          console.log('Unknown error:', err);
+          // If you wish, you can break the loop here or continue to the next iteration
+        }
+      }
+    })
+
+    
+  }
+  
+  async function installMetricsServer() {
+    try {
+    //   const response = await fetch('https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml');
+    //   const text = await response.text();
+    //   const manifest = yaml.loadAll(text);
+   
+    const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
+    console.log('manifest: ', manifest)
+    // for (const obj of manifest) {
+    //     await applyYaml(obj);
+    //   }
+        await applyYaml(manifest)
+      console.log('Metrics Server installed successfully.');
+    } catch (err) {
+      console.error('Failed to install Metrics Server:', err);
+    }
+  }
+  
+  const metricServerInstaller = async () => {
+    const isMetricsServerInstalled = await checkMetricsServer();
+    if (isMetricsServerInstalled) {
+      console.log("Metrics Server already installed.");
+      //await installMetricsServer();
+    } else {
+      console.log("Metrics Server is not installed. Installing now...");
+      await installMetricsServer();
+    }
+  };
+  
+  metricServerInstaller();
+
+
 //function to run to quit watching pods:
 
 const rl = readline.createInterface({
