@@ -55,6 +55,8 @@ const getNodes = () => {
 
 //GET CONTAINERS
 
+
+
 const getContainers = () => {
     //queries for every pod, then pulls each container out of the pod and lists each individually...this will probably have to move to a sql database
     k8sApi.listPodForAllNamespaces().then((res) => {
@@ -75,79 +77,81 @@ const getContainers = () => {
   });
   };
 
-  let intervalID;
+let intervalID;
 
-  const localStorage = [];
+const localStorage = [];
 
-  const dbPull = () => {
-    return localStorage;
-  }
-  
-  const dbAdd = (podname) => {
-    localStorage.push({name: podname})
-  }
-  
-  const podChecker = async () => {
-    intervalID = setInterval(async () => {
-      //query for pod list
-      const currentPods = await dbPull();
-      k8sApi.listPodForAllNamespaces().then((res) => {
-        const nameArray = []
-        res.body.items.forEach((pod) => {
-          //this is an array of objects with property 'name'
-          nameArray.push(pod.metadata.name)
-          
-          let found = false;
-          // console.log('length: ', currentPods.length)
-          // console.log(currentPods)
-          for (let i = 0; i < currentPods.length; i++) {
-            if (currentPods[i].name === pod.metadata.name) {found = true};
-            
-            // console.log('currentPod in db: ', currentPods[i], 'checking against: ', pod.metadata.name)
-          }
-          
-          // console.log('')
-             //query from database
-              //database returns an array of objects
-             //if pod is not in database, add to database and log that it was created
-             //if existing pod in database is not in query, delete it from database, and log that it was destroyed
-          if (!found) {
-            dbAdd(pod.metadata.name);
-            console.log(`Added ${pod.metadata.name} to cluster`.green);
-          }
-          
-        });
-        return nameArray
-    }).then(async (res) => {
-      //res is an array
-      for (let i = 0; i < currentPods.length; i++) {
-        if (!res.includes(currentPods[i].name)){
-          console.log (`${currentPods[i].name} has crashed!`.red)
-          localStorage.splice(i, 1)
-          // await prisma.Pods.deleteMany({
-          //   where: {
-          //     name: currentPods[i].name
-          //   }
-          // })
+const dbPull = () => {
+return localStorage;
+}
+
+const dbAdd = (podname) => {
+localStorage.push({name: podname})
+}
+
+let interval = 1000;
+
+const podChecker = async () => {
+intervalID = setInterval(async () => {
+    //query for pod list
+    const currentPods = await dbPull();
+    k8sApi.listPodForAllNamespaces().then((res) => {
+    const nameArray = []
+    res.body.items.forEach((pod) => {
+        //this is an array of objects with property 'name'
+        nameArray.push(pod.metadata.name)
+        
+        let found = false;
+        // console.log('length: ', currentPods.length)
+        // console.log(currentPods)
+        for (let i = 0; i < currentPods.length; i++) {
+        if (currentPods[i].name === pod.metadata.name) {found = true};
+        
+        // console.log('currentPod in db: ', currentPods[i], 'checking against: ', pod.metadata.name)
         }
-      }
-      promptForCommand();
+        
+        // console.log('')
+            //query from database
+            //database returns an array of objects
+            //if pod is not in database, add to database and log that it was created
+            //if existing pod in database is not in query, delete it from database, and log that it was destroyed
+        if (!found) {
+        dbAdd(pod.metadata.name);
+        console.log(`Added ${pod.metadata.name} to cluster`.green);
+        }
+        
+    });
+    return nameArray
+}).then(async (res) => {
+    //res is an array
+    for (let i = 0; i < currentPods.length; i++) {
+    if (!res.includes(currentPods[i].name)){
+        console.log (`${currentPods[i].name} has crashed!`.red)
+        localStorage.splice(i, 1)
+        // await prisma.Pods.deleteMany({
+        //   where: {
+        //     name: currentPods[i].name
+        //   }
+        // })
     }
-  
-    )
-    .catch((err) => {
-        console.error('Error:', err);
-    }); 
-  
-  
-     
-  
-    }, 1000)
-  };
-  
-  const stopPodCheck = () => {
+    }
+    promptForCommand();
+}
+
+)
+.catch((err) => {
+    console.error('Error:', err);
+}); 
+
+
+    
+
+}, interval)
+};
+
+const stopPodCheck = () => {
     clearInterval(intervalID);
-  };
+};
   
 
 //function to run to quit watching pods:
@@ -159,8 +163,8 @@ const rl = readline.createInterface({
 
 const promptForCommand = () => {
     rl.question('> ', (command) => {
-        switch (command.trim().toLowerCase()) {
-        case 'stop':
+        switch (command.length > 0) {
+        case true:
             stopPodCheck();
             process.exit();
             console.log('Watchdog is taking a break from pod watching');
