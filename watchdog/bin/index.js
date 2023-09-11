@@ -91,6 +91,8 @@ localStorage.push({name: podname})
 
 let interval = 1000;
 
+let counter = 0;
+
 const podChecker = async () => {
 intervalID = setInterval(async () => {
     //query for pod list
@@ -117,10 +119,15 @@ intervalID = setInterval(async () => {
             //if existing pod in database is not in query, delete it from database, and log that it was destroyed
         if (!found) {
         dbAdd(pod.metadata.name);
-        console.log(`Added ${pod.metadata.name} to cluster`.green);
+            if (counter > 0) {
+                console.log(`Added ${pod.metadata.name} to cluster`.green);
+            }
         }
         
+        
+        
     });
+    counter++;
     return nameArray
 }).then(async (res) => {
     //res is an array
@@ -135,9 +142,9 @@ intervalID = setInterval(async () => {
         // })
     }
     }
+    
     promptForCommand();
-}
-
+} 
 )
 .catch((err) => {
     console.error('Error:', err);
@@ -163,7 +170,7 @@ const rl = readline.createInterface({
 
 const promptForCommand = () => {
     rl.question('> ', (command) => {
-        switch (command.length > 0) {
+        switch (command.length >= 0) {
         case true:
             stopPodCheck();
             process.exit();
@@ -240,19 +247,23 @@ try {
   if (args['--start']) {
     const config = getConfig();
     start(config);
-  } if (args['--pods']) {
+  } else if (args['--pods']) {
     getPods();
-  } if (args['--nodes']) {
+  } else if (args['--nodes']) {
     getNodes();
-  } if (args['--containers']) {
+  } else if (args['--containers']) {
     getContainers();
-  } if (args['--watch']) {
+  } else if (args['--watch']) {
     podChecker();
+    setTimeout(()=>console.log('Press Enter to stop watching.'), 1500)
+  } else {
+    console.log('COMMAND NOT FOUND')
+    process.exit();
   }
 } catch (e) {
     configuredLogger.warning(e.message);
   console.log();
-  usage();
+  process.exit();
 }
 
 //THIS RUNS WHEN UNEXPECTED FLAGS ARE GIVEN
