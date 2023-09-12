@@ -130,7 +130,7 @@
    ```sh
    watchdog --[resourcetype]
    ```
-  <img src="images/screenshot1.png" alt="Logo" width="400" height="400">
+  <img src="images/screenshot1.png" alt="Logo" width="400" height="auto">
 
 2. Provide real time crash notifications
    ```sh
