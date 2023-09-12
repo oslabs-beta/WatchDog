@@ -99,12 +99,9 @@
 
 ### Prerequisites
 
-1. Install [!Minikube][Minikube-url]
-2. Install [!Docker][Docker-url]
-   ```sh
-   watchdog --start
-   ```
+1. Install [Minikube][Minikube-url]
 
+2. Install [Docker][Docker-url]
 
 ### Installation
 
