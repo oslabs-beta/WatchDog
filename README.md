@@ -24,7 +24,7 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">project_title</h3>
+<h3 align="center">WatchdogCLI</h3>
 
   <p align="center">
     Simple, custom command line monitoring for local kubernetes development. 
@@ -80,7 +80,7 @@
 
 ### Built With
 
-* [![Next][Next.js]][Next-url]
+* [![Minikube][https://minikube.sigs.k8s.io/]][Minikube-url]
 * [![React][React.js]][React-url]
 * [![Vue][Vue.js]][Vue-url]
 * [![Angular][Angular.io]][Angular-url]
@@ -122,11 +122,11 @@ To get a local copy up and running follow these simple example steps.
    watchdog --[resourcetype]
    ```
 2. Provide real time crash notifications
-  ```sh
+   ```sh
    watchdog --watch
    ```
 3. Get metrics for all pods
-  ```sh
+   ```sh
    watchdog --metrics
    ```
 _For more examples, please refer to the [Documentation](https://example.com)_
