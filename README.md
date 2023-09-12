@@ -96,16 +96,11 @@
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-1. Minikube
-   ```sh
-   npm install watchdogcli
-   ```
-2. Docker
+1. Install [!Minikube][Minikube-url]
+2. Install [!Docker][Docker-url]
    ```sh
    watchdog --start
    ```
@@ -227,6 +222,7 @@ Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/Watch
 [product-screenshot]: images/screenshot.png
 [minikube]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB 
 [Minikube-url]: https://minikube.sigs.k8s.io/
+[Docker-url]: https://www.docker.com/
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
