@@ -1,0 +1,16 @@
+{
+  "name": "watchdogcli",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "./setup.sh"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WatchDogCLI/WatchDog.git"
+  }
+}
