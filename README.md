@@ -80,7 +80,7 @@
 
 ### Built With
 
-* [![Minikube][https://minikube.sigs.k8s.io/]][Minikube-url]
+* [![Minikube][]][Minikube-url]
 * [![React][React.js]][React-url]
 * [![Vue][Vue.js]][Vue-url]
 * [![Angular][Angular.io]][Angular-url]
@@ -213,6 +213,8 @@ Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/Watch
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
 [product-screenshot]: images/screenshot.png
+[minikube]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB 
+[Minikube-url]: https://minikube.sigs.k8s.io/
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
