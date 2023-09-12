@@ -19,14 +19,13 @@ const getContainers = require('./getContainers.js');
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 const log = console.log;
+const getNodeUsage = require('./nodeUsage.js') 
+const givePods = require('./podDropdown.js')
 
 //for DEBUG console.logs send string to 'configuredLogger.debug('strings', 'here')'
 //show DEBUG logs with 'DEBUG=* watchdog --start'
 //filter DEBUG logs by namespaceing the environment variable:
-//  'DEBUG=commands:* watchdog --start' 
-
-
-
+//  'DEBUG=commands:* watchdog --start'
 
 // Initialize Kubernetes API client
 const kc = new k8s.KubeConfig();
@@ -188,13 +187,13 @@ const metricServerInstaller = async () => {
 
 const metricsAPI = 'apis/metrics.k8s.io/v1beta1';
 
-async function getPodMetrics(namespace) {
+async function getPodMetric(namespace = 'kube-system') {
   try {
     const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
     const res = await k8sApi.listNamespacedPod(namespace);
     
     const podNames = res.body.items.map(pod => pod.metadata.name);
-    console.log('podnames: ', podNames)
+    // console.log('podnames: ', podNames)
     for (const podName of podNames) {
       const { body } = await customObjectsApi.getNamespacedCustomObject(
         'metrics.k8s.io',
@@ -203,6 +202,7 @@ async function getPodMetrics(namespace) {
         'pods',
         podName
       );
+      
       console.log(`Metrics for pod ${podName}: `, body.containers[0].usage);
     }
     process.exit();
@@ -212,38 +212,9 @@ async function getPodMetrics(namespace) {
   }
 }
 
-// GET USAGE
-
-const getUsage = async () => {
-  try {
-    const topNodesRes = await k8s.topNodes(k8sApi);
-    const CPUPercentage = () => {
-      return (
-        Math.floor(
-          (100 * Number(topNodesRes[0].CPU.RequestTotal)) /
-            Number(topNodesRes[0].CPU.Capacity)
-        ).toString() + '%'
-      );
-    };
-    const memoryPercentage = () => {
-      return (
-        Math.floor(
-          (100 * Number(topNodesRes[0].Memory.RequestTotal)) /
-            Number(topNodesRes[0].Memory.Capacity)
-        ).toString() + '%'
-      );
-    };
-    const CPU = CPUPercentage();
-    const memory = memoryPercentage();
-    console.log(`CPU: ${CPU} Memory: ${memory}`.cyan);
-    process.exit();
-  } catch (err) {
-    console.error(err);
-  }
-};
 
 
-//function to run to quit watching pods:
+
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -265,55 +236,35 @@ const promptForCommand = () => {
         // promptForCommand(); // Continue prompting
     });
 };
+
+
+
+
+const namespace = 'kube-system'; // Replace with the namespace you're interested in
+const podName = 'etcd-minikube'; // Replace with the pod name you're interested in
+
+async function getPodResourcePercents() {
+  try {
+    const res = await k8sApi.readNamespacedPod(podName, namespace);
+    const pod = res.body;
+    
+    pod.spec.containers.forEach((container) => {
+        // console.log('container.resources.limits', container.resources)
+      console.log(`Container: ${container.name}`);
+    //   console.log(`CPU Limit: ${container.resources.limits.cpu}`);
+    //   console.log(`Memory Limit: ${container.resources.limits.memory}`);
+      console.log(`CPU Request: ${container.resources.requests.cpu}`);
+      console.log(`Memory Request: ${container.resources.requests.memory}`);
+      console.log('---');
+    });
+  } catch (err) {
+    console.error('Error fetching pod info:', err);
+  }
+}
+
+// getPodResourcePercents();
+
   
-  
-
-const dog = `░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓▒▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░░░░░░░░░░░░
-░░░░░░░░░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒░░░░░░░░░░░░░░░░░░▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░
-░░░░░░░░░░▓▓▓▓▓▓░░░░▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░░░▓▓▓▓▓▒░░░░░░░░░░░░
-░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒░░░░░░░░░░░▒▓▓▓▓▓░░░░░░░░░░░░
-░░░░░░░░░▒▓▓▓▓▓░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░▓▓▓▓▓░░░░░░░░░░░░
-░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░
-░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓░░░░░░░░░░░░▒▓▓▓▓▓░░░░░░░░░░░
-░░░░░░░░▒▓▓▓▓▓░░░░░░░░░░░▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░▒▓▓▓▓▓▒░░░░░░░░░░
-░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░
-░░░░░░░░▓▓▓▓▓░░░░░░░░░▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░▒▓▓▓▓▓░░░░░░░░░░
-░░░░░░░▒▓▓▓▓▓░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓░░░░░░░░▓▓▓▓▓▒░░░░░░░░░
-░░░░░░░▓▓▓▓▓▒░░░░░░▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░▓▓▓▓▓▓░░░░░░░░░
-░░░░░░▒▓▓▓▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓░░░░░▒▓▓▓▓▓░░░░░░░░░
-░░░░░░▓▓▓▓▓▓░░░░▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▒░░░░▓▓▓▓▓▒░░░░░░░░
-░░░░░░▓▓▓▓▓▒░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░▒▓▓▓▓▓░░░░░░░░
-░░░░░▒▓▓▓▓▓░░▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▒░░▓▓▓▓▓░░░░░░░░
-░░░░░▓▓▓▓▓▓▒▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▒▓▓▓▓▓▒░░░░░░░
-░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░▓▓▓▓▒░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░░░░░░
-░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░▒▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▒░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░
-░░░░░░░░▒▓▓▓▒▓▓▓▓▓▓░░░░░░░░▒▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▓▒░░░░░░░░▓▓▓▓▓▒▒▓▓▓▒░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░▒▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▒░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░▒▓▓▓▒░░░░░░▒▓▓▓▒░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▒░░▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░▓▓▓▓▓░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░▒▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▓░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░▒▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░▓▓▓▓▓▒░░░░░░░░░░░░░░░░▒▒▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-`
-
-// console.log(dog.cyan);
-
-// console.log('Welcome to the Watchdog CLI.'.cyan);
 
 // GIVE HELP TO USER
 const giveHelp = () => {
@@ -361,6 +312,7 @@ const giveHelp = () => {
     });
 };
 
+// LIST OF COMMANDS
 try {
   const args = arg({
     '--start': Boolean,
@@ -369,7 +321,9 @@ try {
     '--containers': Boolean,
     '--watch': Boolean,
     '--metrics': Boolean,
-    '--help': Boolean
+    '--help': Boolean,
+    '--nodeusage': Boolean,
+    '--podusage': Boolean,
   });
 
   configuredLogger.debug('Received args', args);
@@ -389,10 +343,15 @@ try {
     podChecker();
     setTimeout(()=>console.log('Press Enter to stop watching.'), 1500)
   } else if (args['--metrics']) {
-    getPodMetrics('kube-system');
+    getPodMetric();
   } else if (args['--help']) {
     giveHelp();
-  }else {
+  } else if (args['--nodeusage']) {
+    getNodeUsage();
+  } else if (args['--podusage']) {
+    givePods();
+    // getPodUsage('kube-scheduler-minikube', 'kube-system');
+  } else {
     console.log('COMMAND NOT FOUND')
     process.exit();
   }
