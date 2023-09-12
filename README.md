@@ -103,6 +103,11 @@
 
 2. Install [Docker][Docker-url]
 
+3. Ensure minikube is running
+   ```sh
+   minikube start
+   ```
+
 ### Installation
 
 1. Install NPM package
@@ -125,6 +130,8 @@
    ```sh
    watchdog --[resourcetype]
    ```
+  <img src="images/screenshot1.png" alt="Logo" width="400" height="400">
+
 2. Provide real time crash notifications
    ```sh
    watchdog --watch
