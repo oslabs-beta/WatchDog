@@ -99,6 +99,18 @@
 This is an example of how you may give instructions on setting up your project locally.
 To get a local copy up and running follow these simple example steps.
 
+### Prerequisites
+
+1. Minikube
+   ```sh
+   npm install watchdogcli
+   ```
+2. Docker
+   ```sh
+   watchdog --start
+   ```
+
+
 ### Installation
 
 1. Install NPM package
