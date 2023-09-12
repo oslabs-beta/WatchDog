@@ -16,11 +16,17 @@ const colors = require('colors');
 const getPods = require('./getPods.js');
 const getNodes = require('./getNodes.js');
 const getContainers = require('./getContainers.js');
+const chalk = require('chalk');
+const inquirer = require('inquirer');
+const log = console.log;
 
 //for DEBUG console.logs send string to 'configuredLogger.debug('strings', 'here')'
 //show DEBUG logs with 'DEBUG=* watchdog --start'
 //filter DEBUG logs by namespaceing the environment variable:
 //  'DEBUG=commands:* watchdog --start' 
+
+
+
 
 // Initialize Kubernetes API client
 const kc = new k8s.KubeConfig();
@@ -172,7 +178,7 @@ const metricServerInstaller = async () => {
   const isMetricsServerInstalled = await checkMetricsServer();
   if (isMetricsServerInstalled) {
     console.log("Metrics Server already installed.");
-    // process.exit();
+    process.exit();
   } else {
     console.log("Metrics Server is not installed. Installing now...");
     await installMetricsServer();
@@ -180,76 +186,61 @@ const metricServerInstaller = async () => {
 };
 
 
+const metricsAPI = 'apis/metrics.k8s.io/v1beta1';
 
-
-// async function checkMetricsServer() {
-//     const api = kc.makeApiClient(k8s.ApisApi);
-//     try {
-//       const result = await api.getAPIVersions();
-//     //   console.log('result: ', result.body.groups)
-//       const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
-//     //   console.log('metricsAPI: ', metricsAPI)
-//       return Boolean(metricsAPI);
-//     } catch (error) {
-//       console.error("Failed to retrieve API groups:", error);
-//       return false;
-//     }
-//   }
-
-// const api = kc.makeApiClient(k8s.KubernetesObjectApi);
-// async function applyYaml(obj) {
-//     obj.metadata.namespace = obj.metadata.namespace || 'default';
-//     console.log('doing ish')
-//         // console.log('length: ', objArray.length)
-//         // await api.create(obj)
-//       try {
-//         console.log('Applying object:');
-//         await api.create(obj);
-//       } catch (err) {
-//         if (err.response && err.response.statusCode === 404) {
-//         //   await api.create(obj);
-//           console.log('Successfully created object');
-//         } else {
-//           console.log('Unknown error:', err);
-//           // If you wish, you can break the loop here or continue to the next iteration
-//         }
-//       }
-
+async function getPodMetrics(namespace) {
+  try {
+    const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
+    const res = await k8sApi.listNamespacedPod(namespace);
     
-//   }
-  
-//   async function installMetricsServer() {
-//     try {
-//     //   const response = await fetch('https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml');
-//     //   const text = await response.text();
-//     //   const manifest = yaml.loadAll(text);
-   
-//     const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
-//     // console.log('manifest: ', manifest)
-//     // for (const obj of manifest) {
-//     //     await applyYaml(obj);
-//     //   }
-//     manifest.forEach((manifestObj) => {
-//         applyYaml(manifestObj)
-//     })
-//     console.log('Metrics Server installed successfully.');
-//     } catch (err) {
-//       console.error('Failed to install Metrics Server:', err);
-//     }
-//   }
-  
-//   const metricServerInstaller = async () => {
-//     const isMetricsServerInstalled = await checkMetricsServer();
-//     if (isMetricsServerInstalled) {
-//       console.log("Metrics Server already installed.");
-//       //await installMetricsServer();
-//     } else {
-//       console.log("Metrics Server is not installed. Installing now...");
-//       await installMetricsServer();
-//     }
-//   };
-  
-//   metricServerInstaller();
+    const podNames = res.body.items.map(pod => pod.metadata.name);
+    console.log('podnames: ', podNames)
+    for (const podName of podNames) {
+      const { body } = await customObjectsApi.getNamespacedCustomObject(
+        'metrics.k8s.io',
+        'v1beta1',
+        namespace,
+        'pods',
+        podName
+      );
+      console.log(`Metrics for pod ${podName}: `, body.containers[0].usage);
+    }
+    process.exit();
+  } catch (err) {
+    console.error('Error fetching metrics: ', err);
+    process.exit();
+  }
+}
+
+// GET USAGE
+
+const getUsage = async () => {
+  try {
+    const topNodesRes = await k8s.topNodes(k8sApi);
+    const CPUPercentage = () => {
+      return (
+        Math.floor(
+          (100 * Number(topNodesRes[0].CPU.RequestTotal)) /
+            Number(topNodesRes[0].CPU.Capacity)
+        ).toString() + '%'
+      );
+    };
+    const memoryPercentage = () => {
+      return (
+        Math.floor(
+          (100 * Number(topNodesRes[0].Memory.RequestTotal)) /
+            Number(topNodesRes[0].Memory.Capacity)
+        ).toString() + '%'
+      );
+    };
+    const CPU = CPUPercentage();
+    const memory = memoryPercentage();
+    console.log(`CPU: ${CPU} Memory: ${memory}`.cyan);
+    process.exit();
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 
 //function to run to quit watching pods:
@@ -324,13 +315,61 @@ const dog = `░░░░░░░░░░░░░░░░░░░░░░�
 
 // console.log('Welcome to the Watchdog CLI.'.cyan);
 
+// GIVE HELP TO USER
+const giveHelp = () => {
+  inquirer
+    .prompt([
+      {
+        type: 'rawlist',
+        name: 'list commands',
+        message: 'What do you want to do?',
+        choices: [
+          'Display running pods',
+          'Display running nodes',
+          'Display running containers',
+          'Display current node CPU and memory usage',
+          new inquirer.Separator(),
+          'Other future option 1',
+          'Other future option 2',
+        ],
+      },
+      // {
+      //   type: 'rawlist',
+      //   name: 'size',
+      //   message: 'What size do you need',
+      //   choices: ['Jumbo', 'Large', 'Standard', 'Medium', 'Small', 'Micro'],
+      //   filter(val) {
+      //     return val.toLowerCase();
+      //   },
+      // },
+    ])
+    .then((answers) => {
+      for (const key in answers) {
+        if (answers[key] === 'Display running pods') {
+          getPods();
+        }
+        if (answers[key] === 'Display running nodes') {
+          getNodes();
+        }
+        if (answers[key] === 'Display running containers') {
+          getContainers();
+        }
+        if (answers[key] === 'Display current node CPU and memory usage') {
+          getUsage();
+        }
+      }
+    });
+};
+
 try {
   const args = arg({
     '--start': Boolean,
     '--pods': Boolean,
     '--nodes': Boolean,
     '--containers': Boolean,
-    '--watch': Boolean
+    '--watch': Boolean,
+    '--metrics': Boolean,
+    '--help': Boolean
   });
 
   configuredLogger.debug('Received args', args);
@@ -349,7 +388,11 @@ try {
   } else if (args['--watch']) {
     podChecker();
     setTimeout(()=>console.log('Press Enter to stop watching.'), 1500)
-  } else {
+  } else if (args['--metrics']) {
+    getPodMetrics('kube-system');
+  } else if (args['--help']) {
+    giveHelp();
+  }else {
     console.log('COMMAND NOT FOUND')
     process.exit();
   }
