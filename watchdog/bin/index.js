@@ -13,6 +13,9 @@ const yaml = require('js-yaml');
 const path = require("path");
 const readline = require('readline');
 const colors = require('colors');
+const getPods = require('./getPods.js');
+const getNodes = require('./getNodes.js');
+const getContainers = require('./getContainers.js');
 
 //for DEBUG console.logs send string to 'configuredLogger.debug('strings', 'here')'
 //show DEBUG logs with 'DEBUG=* watchdog --start'
@@ -24,58 +27,6 @@ const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 
-//GET PODS
-const getPods = () => {
-    k8sApi.listPodForAllNamespaces().then((res) => {
-      console.log('Pods:'.cyan);
-      res.body.items.forEach((pod) => {
-          // console.log(`${pod.metadata.namespace}/${pod.metadata.name}`);
-          console.log(`   ${pod.metadata.name}`);
-      });
-      process.exit();
-  })
-  .catch((err) => {
-      console.error('Error:', err);
-  }); 
-  };
-
-//GET NODES
-const getNodes = () => {
-    k8sApi.listNode().then((res) => {
-      console.log('Nodes:'.cyan);
-      res.body.items.forEach((node) => {
-          console.log(`   ${node.metadata.name}`);
-      });
-      process.exit();
-  })
-  .catch((err) => {
-      console.error('Error:', err);
-  });
-  };
-
-//GET CONTAINERS
-
-
-
-const getContainers = () => {
-    //queries for every pod, then pulls each container out of the pod and lists each individually...this will probably have to move to a sql database
-    k8sApi.listPodForAllNamespaces().then((res) => {
-      console.log('Containers:'.cyan);
-      
-      res.body.items.forEach((pod) => {
-          // each of these pods can/will have multiple containers so we have to iterate through it again
-          const containers = pod.spec.containers;
-          containers.forEach((container) => {
-              // console.log(`Namespace: ${pod.metadata.namespace}, Pod: ${pod.metadata.name}, Container: ${container.name}`);
-              console.log(`   ${container.name}`);
-          });
-      });
-      process.exit();
-  })
-  .catch((err) => {
-      console.error('Error:', err);
-  });
-  };
 
 let intervalID;
 
@@ -164,89 +115,141 @@ const stopPodCheck = () => {
 //METRICS SERVER
 
 async function checkMetricsServer() {
-    const api = kc.makeApiClient(k8s.ApisApi);
-    try {
-      const result = await api.getAPIVersions();
-      const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
-      console.log('metricsAPI: ', metricsAPI)
-      return Boolean(metricsAPI);
-    } catch (error) {
-      console.error("Failed to retrieve API groups:", error);
-      return false;
-    }
+  const api = kc.makeApiClient(k8s.ApisApi);
+  try {
+    const result = await api.getAPIVersions();
+    const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
+    return Boolean(metricsAPI);
+  } catch (error) {
+    console.error("Failed to retrieve API groups:", error);
+    return false;
   }
-  
-//   async function applyYaml(obj) {
-//     const api = kc.makeApiClient(k8s.KubernetesObjectApi);
+}
+
+const api = kc.makeApiClient(k8s.KubernetesObjectApi);
+
+async function applyYaml(obj) {
+//   obj.metadata.namespace = obj.metadata.namespace || 'kube-system';
+//   console.log('obj: ', obj)
+//     await api.create(obj);
+    return new Promise((resolve) => {
+        // console.log('obj: ', obj)
+        setTimeout(() => {
+          api.create(obj);
+          resolve();
+        }, 1000);
+      });
+//   try {
+//     await api.read(obj);
+//     await api.replace(obj);
+//   } catch (err) {
+//     if (err.response && err.response.statusCode === 404) {
+//         console.log('obj', obj)
+//       await api.create(obj);
+//     } else {
+//       throw err;
+//     }
+//   }
+}
+
+async function installMetricsServer() {
+  try {
+    const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
+    // console.log('manifest: ', manifest)
+    for (const obj of manifest) {
+    //    setTimeout(() => {applyYaml(obj)}, 1000);
+        await applyYaml(obj)
+    }
+    console.log('Metrics Server installed successfully.');
+    setTimeout(() => process.exit(), 1000);
+
+  } catch (err) {
+    console.error('Failed to install Metrics Server:', err);
+  }
+}
+
+const metricServerInstaller = async () => {
+  const isMetricsServerInstalled = await checkMetricsServer();
+  if (isMetricsServerInstalled) {
+    console.log("Metrics Server already installed.");
+    // process.exit();
+  } else {
+    console.log("Metrics Server is not installed. Installing now...");
+    await installMetricsServer();
+  }
+};
+
+
+
+
+// async function checkMetricsServer() {
+//     const api = kc.makeApiClient(k8s.ApisApi);
 //     try {
-//         console.log('obj: ', obj)
-//       await api.read(obj);
-//       await api.replace(obj);
-//     } catch (err) {
-//       if (err.response && err.response.statusCode === 404) {
-//         await api.create(obj);
-//       } else {
-//         console.error('Unknown error:', err);
-//       }
+//       const result = await api.getAPIVersions();
+//     //   console.log('result: ', result.body.groups)
+//       const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
+//     //   console.log('metricsAPI: ', metricsAPI)
+//       return Boolean(metricsAPI);
+//     } catch (error) {
+//       console.error("Failed to retrieve API groups:", error);
+//       return false;
 //     }
 //   }
 
-async function applyYaml(objArray) {
-    const api = kc.makeApiClient(k8s.KubernetesObjectApi);
-    objArray.forEach(async obj => {
-        console.log('doing ish')
-        console.log('length: ', objArray.length)
-        await api.create(obj)
-      try {
-        console.log('Applying object:', obj);
-        // await api.read(obj);
-        // await api.replace(obj);
-        await api.create(obj);
-        console.log('Successfully replaced object');
-      } catch (err) {
-        if (err.response && err.response.statusCode === 404) {
-          await api.create(obj);
-          console.log('Successfully created object');
-        } else {
-          console.log('Unknown error:', err);
-          // If you wish, you can break the loop here or continue to the next iteration
-        }
-      }
-    })
+// const api = kc.makeApiClient(k8s.KubernetesObjectApi);
+// async function applyYaml(obj) {
+//     obj.metadata.namespace = obj.metadata.namespace || 'default';
+//     console.log('doing ish')
+//         // console.log('length: ', objArray.length)
+//         // await api.create(obj)
+//       try {
+//         console.log('Applying object:');
+//         await api.create(obj);
+//       } catch (err) {
+//         if (err.response && err.response.statusCode === 404) {
+//         //   await api.create(obj);
+//           console.log('Successfully created object');
+//         } else {
+//           console.log('Unknown error:', err);
+//           // If you wish, you can break the loop here or continue to the next iteration
+//         }
+//       }
 
     
-  }
+//   }
   
-  async function installMetricsServer() {
-    try {
-    //   const response = await fetch('https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml');
-    //   const text = await response.text();
-    //   const manifest = yaml.loadAll(text);
+//   async function installMetricsServer() {
+//     try {
+//     //   const response = await fetch('https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml');
+//     //   const text = await response.text();
+//     //   const manifest = yaml.loadAll(text);
    
-    const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
-    console.log('manifest: ', manifest)
-    // for (const obj of manifest) {
-    //     await applyYaml(obj);
-    //   }
-        await applyYaml(manifest)
-      console.log('Metrics Server installed successfully.');
-    } catch (err) {
-      console.error('Failed to install Metrics Server:', err);
-    }
-  }
+//     const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
+//     // console.log('manifest: ', manifest)
+//     // for (const obj of manifest) {
+//     //     await applyYaml(obj);
+//     //   }
+//     manifest.forEach((manifestObj) => {
+//         applyYaml(manifestObj)
+//     })
+//     console.log('Metrics Server installed successfully.');
+//     } catch (err) {
+//       console.error('Failed to install Metrics Server:', err);
+//     }
+//   }
   
-  const metricServerInstaller = async () => {
-    const isMetricsServerInstalled = await checkMetricsServer();
-    if (isMetricsServerInstalled) {
-      console.log("Metrics Server already installed.");
-      //await installMetricsServer();
-    } else {
-      console.log("Metrics Server is not installed. Installing now...");
-      await installMetricsServer();
-    }
-  };
+//   const metricServerInstaller = async () => {
+//     const isMetricsServerInstalled = await checkMetricsServer();
+//     if (isMetricsServerInstalled) {
+//       console.log("Metrics Server already installed.");
+//       //await installMetricsServer();
+//     } else {
+//       console.log("Metrics Server is not installed. Installing now...");
+//       await installMetricsServer();
+//     }
+//   };
   
-  metricServerInstaller();
+//   metricServerInstaller();
 
 
 //function to run to quit watching pods:
@@ -333,8 +336,10 @@ try {
   configuredLogger.debug('Received args', args);
 
   if (args['--start']) {
-    const config = getConfig();
-    start(config);
+    // const config = getConfig();
+    // start(config);
+    console.log('Checking for Metrics Server...')
+    metricServerInstaller();
   } else if (args['--pods']) {
     getPods();
   } else if (args['--nodes']) {

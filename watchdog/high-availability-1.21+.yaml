@@ -131,15 +131,15 @@ spec:
       labels:
         k8s-app: metrics-server
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                k8s-app: metrics-server
-            namespaces:
-            - kube-system
-            topologyKey: kubernetes.io/hostname
+      # affinity:
+        # podAntiAffinity:
+        #   requiredDuringSchedulingIgnoredDuringExecution:
+        #   - labelSelector:
+        #       matchLabels:
+        #         k8s-app: metrics-server
+        #     namespaces:
+        #     - kube-system
+        #     topologyKey: kubernetes.io/hostname
       containers:
       - args:
         - --cert-dir=/tmp
