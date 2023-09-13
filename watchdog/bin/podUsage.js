@@ -14,11 +14,11 @@ module.exports = async (names, namespaces) => {
     try {
         const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
         console.log(names, 'metrics:', res.body.containers[0].usage);
-        // console.log('body.container.resources: ', res.body)
-        process.exit();
+        return {cpu: res.body.containers[0].usage.cpu, memory: res.body.containers[0].usage.memory}
+        // process.exit();
     } catch (err) {
         console.error('Error fetching metrics:', err);
         process.exit();
     }}
-    getPodMetrics();
+   return getPodMetrics();
   };
