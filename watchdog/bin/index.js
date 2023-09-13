@@ -260,9 +260,9 @@ const giveHelp = () => {
           'Display running nodes',
           'Display running containers',
           'Display current node CPU and memory usage',
+          'Display valid commands',
           new inquirer.Separator(),
-          'Other future option 1',
-          'Other future option 2',
+          'Other potential options...',
         ],
       },
     ])
@@ -280,11 +280,38 @@ const giveHelp = () => {
         if (answers[key] === 'Display current node CPU and memory usage') {
           getUsage();
         }
+        if (answers[key] === 'Display valid commands') {
+            printCommands();
+        }
       }
     });
 };
 
-// LIST OF COMMANDS
+//list of valid commands
+const validCommands = [
+	{ option: '--start', description: 'Starts the app' },
+	{ option: '--wizard', description: 'Displays interactive CL prompt!' },
+	{ option: '--pods', description: 'Displays running pods' },
+	{ option: '--nodes', description: 'Displays running nodes' },
+	{ option: '--containers', description: 'Displays running containers' },
+	{ option: '--watch', description: 'Watch pods' },
+	{ option: '--metrics', description: 'Get pod metrics' },
+	{ option: '--help', description: 'Show available commands' },
+	{
+		option: '--nodeusage',
+		description: 'Display current node CPU and memory usage',
+	},
+	{ option: '--podusage', description: 'Display pod usage' },
+];
+
+function printCommands() {
+	console.log(chalk.cyan('List of Valid Commands: watchdog '));
+	validCommands.forEach((command) => {
+		console.log(chalk.cyan(`${command.option}:`), command.description);
+	});
+}
+//added --wizard command like oliver suggested(now the new interactive prompt)
+//--help just shows the list of commands
 try {
   const args = arg({
     '--start': Boolean,
@@ -294,53 +321,48 @@ try {
     '--watch': Boolean,
     '--metrics': Boolean,
     '--help': Boolean,
+    '--wizard': Boolean,
     '--nodeusage': Boolean,
     '--podusage': Boolean,
     '--podpercent': Boolean
   });
 
-  configuredLogger.debug('Received args', args);
+	configuredLogger.debug('Received args', args);
 
-  if (args['--start']) {
-    // const config = getConfig();
-    // start(config);
-    console.log('Checking for Metrics Server...')
-    metricServerInstaller();
-  } else if (args['--pods']) {
-    getPods();
-  } else if (args['--nodes']) {
-    getNodes();
-  } else if (args['--containers']) {
-    getContainers();
-  } else if (args['--watch']) {
-    podChecker();
-    setTimeout(()=>console.log('Press Enter to stop watching.'), 1500)
-  } else if (args['--metrics']) {
-    getPodMetric();
-  } else if (args['--help']) {
-    giveHelp();
-  } else if (args['--nodeusage']) {
-    getNodeUsage();
-  } else if (args['--podusage']) {
-    givePods();
-    // getPodUsage('kube-scheduler-minikube', 'kube-system');
-  } else if (args['--podpercent']) {
-    podPercent();
-  }else {
-    console.log('COMMAND NOT FOUND')
-    process.exit();
-  }
+    if (args['--start']) {
+		// const config = getConfig();
+		// start(config);
+		console.log('Checking for Metrics Server...');
+		metricServerInstaller();
+	} else if (args['--pods']) {
+		getPods();
+	} else if (args['--nodes']) {
+		getNodes();
+	} else if (args['--containers']) {
+		getContainers();
+	} else if (args['--watch']) {
+		podChecker();
+		setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
+	} else if (args['--metrics']) {
+		getPodMetric();
+	} else if (args['--wizard']) {
+		giveHelp();
+	} else if (args['--nodeusage']) {
+		getNodeUsage();
+	} else if (args['--podusage']) {
+		givePods();
+		// getPodUsage('kube-scheduler-minikube', 'kube-system');
+	} else if (args['--podpercent']) {
+        podPercent();
+    } else if (args['--help']) {
+		printCommands();
+		process.exit();
+	} else {
+		log('Invalid command. Type in "watchdog --help" for a list of valid commands.');
+		process.exit();
+	}
 } catch (e) {
-    configuredLogger.warning(e.message);
-  console.log();
-  process.exit();
+	configuredLogger.warning('Please make sure command is written properly.');
+	log();
+	process.exit();
 }
-
-//THIS RUNS WHEN UNEXPECTED FLAGS ARE GIVEN
-function usage() {
-    console.log(`'watchdog [command]'
-    '--start'\t\tStarts the app
-    '--pods'\t\tDisplays running pods
-    '--nodes'\t\tDisplays running nodes
-    '--containers'\tDisplays running containers`);
-    }
