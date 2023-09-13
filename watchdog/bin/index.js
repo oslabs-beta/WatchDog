@@ -51,6 +51,9 @@ let interval = 1000;
 let counter = 0;
 
 let watchPods = true;
+let watchCPUFlag = true;
+//each pod to be watched, stick the pod name and treshold into an object with the properties 'name' and 'threshold'
+
 
 const podChecker = async () => {
 intervalID = setInterval(async () => {
@@ -96,14 +99,49 @@ intervalID = setInterval(async () => {
         }
     }
 
-    //podNames should be array of pods?
-    const watchCPU = (podNames) => {
+    const watchCPU = () => {
+        const kc = new k8s.KubeConfig();
+        kc.loadFromDefault();
+        const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
+        const group = 'metrics.k8s.io';
+        const version = 'v1beta1';
+        const plural = 'pods';
+    
+        async function getPodMetrics() {
+        try {
+            // console.log('fs.readFile(path.resolve(__dirname, "../data/characters.json"), "UTF-8")', fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8"))
+            const data = fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8", (err, data) => {
+                if (err) {
+                  console.error('Error reading the file:', err);
+                } else {
+                  const parsedData = JSON.parse(data);
+                  parsedData.forEach(async (pod) => {
+                    const { name, namespace, treshold, max } = JSON.parse(pod);
+                
+                    const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
+                    
+                    if ((Number(res.body.containers[0].usage.cpu.slice(0, -1))/ max) * 100 > treshold) {
+                        console.log(`${name} has exceeded the treshold of ${treshold}%`)
+                    }
 
+
+                  })
+                }
+              });
+      
+        } catch (err) {
+            console.error('Error fetching metrics:', err);
+            process.exit();
+        }}
+       getPodMetrics();
     };
     
     // Call the function
     if (watchPods) {
-        managePods()
+        managePods();
+    };
+    if (watchCPUFlag) {
+        watchCPU();
     };
 
     promptForCommand();
@@ -113,6 +151,102 @@ intervalID = setInterval(async () => {
 
 const stopPodCheck = () => {
     clearInterval(intervalID);
+};
+
+const podCPUWatchDropDown = async (treshold) => {
+    const kc = new k8s.KubeConfig();
+    kc.loadFromDefault();
+    const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
+
+    const pods = await k8sApi.listPodForAllNamespaces().then((res) => {
+      
+      const podArray = {};
+      res.body.items.forEach((pod) => {
+         podArray[pod.metadata.name] = pod.metadata.namespace
+        });
+    
+      return podArray
+  }).then((pods) => {
+        return pods})
+  .catch((err) => {
+      console.error('Error:', err);
+  }); 
+
+  inquirer
+  .prompt([
+    {
+      type: 'rawlist',
+      name: 'list commands',
+      message: 'Select a pod:',
+      choices: [...Object.keys(pods), new inquirer.Separator()]
+    },
+  ])
+  .then(async (answers) => {
+    const res = await k8sApi.readNamespacedPod(answers['list commands'], pods[answers['list commands']]);
+    const pod = res.body;
+    const container = pod.spec.containers[0];
+    const jsonPod = JSON.stringify({
+        name: answers['list commands'],
+        namespace: pods[answers['list commands']],
+        treshold: treshold,
+        max: Number(container.resources.requests.cpu.slice(0, -1)) * 1000000})
+    // podsCPUWatch.push({name: answers['list commands'], namespace: pods[answers['list commands']], treshold: treshold, max: Number(container.resources.requests.cpu.slice(0, -1)) * 1000000});
+    async function appendToFile(newObject) {
+        const filePath = path.resolve(__dirname, "./podCPU.json");
+        
+        // Read the existing file
+        const data = fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8", (err, data) => {
+            if (err) {
+              console.error('Error reading the file:', err);
+            } else {
+              const parsedData = JSON.parse(data);
+            
+              parsedData.push(newObject);
+             
+            //   fs.writeFile(path.resolve(__dirname, "./podCPU.json"), JSON.stringify(parsedData, null, 2))
+            fs.writeFile(filePath, JSON.stringify(parsedData), (err) => {
+                if (err) {
+                  console.error('Error writing to file:', err);
+                } else {
+                  console.log('Successfully wrote to file');
+                }
+              });
+            }
+          });
+  
+    
+        // Parse the JSON
+        // const json = JSON.parse(data);
+        //   console.log('data: ', data)
+        // Add the new data
+        // data.push(newObject);
+    
+        // Serialize it back to JSON and write to the file
+        // fs.writeFile(filePath, JSON.stringify(data, null, 2));
+    }
+    
+    appendToFile(jsonPod);
+    
+    
+    // fs.appendFile(
+    //     path.resolve(__dirname, "./podCPU.json"),
+    //     jsonPod,
+    //     (err) => {
+    //         if (err) {
+    //           console.error('Error writing to file:', err);
+    //         } else {
+    //           console.log('Successfully wrote to file');
+    //         }
+    //       }
+    //   )
+//     fs.appendFile('./podCPU.json', jsonPod, (err) => {
+//   if (err) {
+//     console.error('Error writing to file:', err);
+//   } else {
+//     console.log('Successfully wrote to file');
+//   }
+// });
+  });
 };
   
 
@@ -206,6 +340,11 @@ const promptForCommand = () => {
         case true:
             stopPodCheck();
             console.log('Watchdog is taking a break from pod watching');
+            fs.writeFileSync(path.resolve(__dirname, "./podCPU.json"), JSON.stringify([]), (err) => {
+                if (err) {
+                  console.error('Error clearing file:', err);
+                } 
+              });
             process.exit();
             return;
         default:
@@ -368,7 +507,8 @@ try {
     '--wizard': Boolean,
     '--nodeusage': Boolean,
     '--podusage': Boolean,
-    '--podpercent': Boolean
+    '--podpercent': Boolean,
+    '--cpuwatch': Number
   });
 
 	configuredLogger.debug('Received args', args);
@@ -401,6 +541,10 @@ try {
     } else if (args['--help']) {
 		printCommands();
 		process.exit();
+	} else if (args['--cpuwatch']) {
+        podCPUWatchDropDown(args['--cpuwatch'])
+		// printCommands();
+		// process.exit();
 	} else {
 		log('Invalid command. Type in "watchdog --help" for a list of valid commands.');
 		process.exit();
