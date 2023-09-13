@@ -50,40 +50,64 @@ let interval = 1000;
 
 let counter = 0;
 
+let watchPods = true;
+
 const podChecker = async () => {
 intervalID = setInterval(async () => {
-    const currentPods = await dbPull();
-    k8sApi.listPodForAllNamespaces().then((res) => {
-    const nameArray = []
-    res.body.items.forEach((pod) => {
-        nameArray.push(pod.metadata.name)
+    const currentPods = dbPull();
+    async function managePods() {
+        try {
+        // Fetch all the pods
+        const res = await k8sApi.listPodForAllNamespaces();
         
-        let found = false;
-        for (let i = 0; i < currentPods.length; i++) {
-        if (currentPods[i].name === pod.metadata.name) {
-            found = true};
-        }
-        if (!found) {
-        dbAdd(pod.metadata.name);
+        const nameArray = [];
+        
+        res.body.items.forEach((pod) => {
+            nameArray.push(pod.metadata.name);
+            
+            let found = false;
+            for (let i = 0; i < currentPods.length; i++) {
+            if (currentPods[i].name === pod.metadata.name) {
+                found = true;
+            }
+            }
+            
+            if (!found) {
+            dbAdd(pod.metadata.name);
             if (counter > 0) {
                 console.log(`Added ${pod.metadata.name} to cluster`.green);
             }
-        }     
-    });
-    counter++;
-    return nameArray
-    }).then(async (res) => {
-    for (let i = 0; i < currentPods.length; i++) {
-    if (!res.includes(currentPods[i].name)){
-        console.log (`${currentPods[i].name} has crashed!`.red)
-        localStorage.splice(i, 1)
+            }
+        });
+        
+        counter++;
+        
+        // Checking for crashed pods
+        for (let i = 0; i < currentPods.length; i++) {
+            if (!nameArray.includes(currentPods[i].name)) {
+            console.log(`${currentPods[i].name} has crashed!`.red);
+            localStorage.splice(i, 1);
+            }
+        }
+        
+        
+        } catch (err) {
+        console.error('Error:', err);
+        }
     }
-    }
+
+    //podNames should be array of pods?
+    const watchCPU = (podNames) => {
+
+    };
+    
+    // Call the function
+    if (watchPods) {
+        managePods()
+    };
+
     promptForCommand();
-    })
-    .catch((err) => {
-    console.error('Error:', err);
-    });
+
     }, interval)
 };
 
@@ -194,16 +218,36 @@ async function getPodResourcePercents(podName, namespace) {
   try {
     const res = await k8sApi.readNamespacedPod(podName, namespace);
     const pod = res.body;
-    
-    const { cpu, memory } = await getPodUsage(podName, namespace)
 
+    const currentUsage = async (names, namespaces) => {
+        const kc = new k8s.KubeConfig();
+        kc.loadFromDefault();
+        const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
+        const group = 'metrics.k8s.io';
+        const version = 'v1beta1';
+        const namespace = namespaces; // Replace with your namespace
+        const plural = 'pods';
+        const name = names; // Replace with your pod name
     
+        async function getPodMetrics() {
+        try {
+            const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
+            // console.log(names, 'metrics:', res.body.containers[0].usage);
+            return {cpu: res.body.containers[0].usage.cpu, memory: res.body.containers[0].usage.memory}
+            // process.exit();
+        } catch (err) {
+            console.error('Error fetching metrics:', err);
+            process.exit();
+        }}
+       return getPodMetrics();
+      }; 
+      const { cpu, memory } = await currentUsage(podName, namespace)   
 
     const container = pod.spec.containers[0]
     const totalMemory = container.resources.requests.memory || 10000
     console.log(`Pod: ${container.name}`);
-    console.log(`Current CPU Usage: ${(Number(cpu.slice(0, -1)) / (Number(container.resources.requests.cpu.slice(0, -1)) * 1000000)) * 100}%`);
-    console.log(`Current Memory Usage: ${Number(memory.slice(0, -2)) / totalMemory}%`);
+    console.log(`Current CPU Usage: ${((Number(cpu.slice(0, -1)) / (Number(container.resources.requests.cpu.slice(0, -1)) * 1000000)) * 100).toFixed(2)}%`);
+    console.log(`Current Memory Usage: ${(Number(memory.slice(0, -2)) / totalMemory).toFixed(2)}%`);
     console.log('---');
     
   } catch (err) {
@@ -278,7 +322,7 @@ const giveHelp = () => {
           getContainers();
         }
         if (answers[key] === 'Display current node CPU and memory usage') {
-          getUsage();
+          getNodeUsage();
         }
         if (answers[key] === 'Display valid commands') {
             printCommands();
