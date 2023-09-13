@@ -485,6 +485,7 @@ const validCommands = [
 	},
 	{ option: '--podusage', description: 'Display pod usage' },
 	{ option: '--podpercent', description: 'choose a pod to display CPU % ' },
+	{ option: '--cpuwatch', description: 'set a threshold for pod cpu' },
 ];
 
 function printCommands() {
