@@ -7,7 +7,7 @@ module.exports = () => {
     const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
 
     k8sApi.listPodForAllNamespaces().then((res) => {
-      console.log('Pods:'.cyan);
+      console.log('Pods running:'.cyan);
       res.body.items.forEach((pod) => {
           // console.log(`${pod.metadata.namespace}/${pod.metadata.name}`);
           console.log(`   ${pod.metadata.name}`);

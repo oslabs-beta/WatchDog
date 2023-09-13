@@ -353,7 +353,7 @@ const promptForCommand = () => {
     });
 };
 
-async function getPodResourcePercents(podName, namespace) {
+async function  getPodResourcePercents(podName, namespace) {
   try {
     const res = await k8sApi.readNamespacedPod(podName, namespace);
     const pod = res.body;
@@ -400,13 +400,12 @@ const podPercent = async () => {
     kc.loadFromDefault();
     const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
 
-    const pods = await k8sApi.listPodForAllNamespaces().then((res) => {
-      
+  const pods = await k8sApi.listPodForAllNamespaces()
+    .then((res) => {
       const podArray = {};
       res.body.items.forEach((pod) => {
          podArray[pod.metadata.name] = pod.metadata.namespace
         });
-    
       return podArray
   }).then((pods) => {
         return pods})
@@ -485,6 +484,7 @@ const validCommands = [
 		description: 'Display current node CPU and memory usage',
 	},
 	{ option: '--podusage', description: 'Display pod usage' },
+	{ option: '--podpercent', description: 'choose a pod to display CPU % ' },
 ];
 
 function printCommands() {
@@ -495,6 +495,7 @@ function printCommands() {
 }
 //added --wizard command like oliver suggested(now the new interactive prompt)
 //--help just shows the list of commands
+//--flags that are set to a number can act as second input for threshold, so add --cpu and --memory threshold(node)
 try {
   const args = arg({
     '--start': Boolean,
@@ -520,7 +521,7 @@ try {
 		metricServerInstaller();
 	} else if (args['--pods']) {
 		getPods();
-	} else if (args['--nodes']) {
+    } else if (args['--nodes']) {
 		getNodes();
 	} else if (args['--containers']) {
 		getContainers();
@@ -554,3 +555,65 @@ try {
 	log();
 	process.exit();
 }
+/*
+const arg = require('arg');
+const k8s = require('@kubernetes/client-node');
+const fetch = require('node-fetch');
+
+// Define the options for command-line arguments
+const args = arg({
+  // ... (other flags)
+  '--cpu': Number,
+  '--threshold': Number,
+});
+
+// Function to handle the command-line arguments
+async function handleArgs(args) {
+  if (args['--cpu'] !== undefined && args['--threshold'] !== undefined) {
+    const cpuThreshold = args['--threshold'];
+
+    // Initialize the Kubernetes API client
+    const kc = new k8s.KubeConfig();
+    kc.loadFromDefault();
+
+    // Define the namespace and pod name you want to monitor
+    const namespace = 'your-namespace'; // Replace with your namespace
+    const podName = 'your-pod-name';     // Replace with your pod name
+
+    // Create an API client for custom metrics
+    const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
+
+    // Fetch pod metrics from the Metrics Server
+    const { body } = await customObjectsApi.getNamespacedCustomObject(
+      'metrics.k8s.io',
+      'v1beta1',
+      namespace,
+      'pods',
+      podName
+    );
+
+    // Get the CPU usage percentage
+    const cpuUsage = parseFloat(body.containers[0].usage.cpu.replace('n', '')) / 1e6; // Convert nanocores to millicores
+
+    console.log(`Current CPU Usage: ${cpuUsage}%`);
+
+    if (cpuUsage > cpuThreshold) {
+      console.log(`CPU Usage (${cpuUsage}%) exceeds the threshold (${cpuThreshold}%).`);
+      // Add code here for alerting or taking action
+      // For example, you can send an alert to a monitoring system or trigger an action.
+    }
+  } else if (args['--help']) {
+    // ... (handle help flag)
+  } else {
+    console.log('Invalid command. Type in "watchdog --help" for a list of valid commands.');
+  }
+}
+
+try {
+  handleArgs(args);
+} catch (e) {
+  console.log('Please make sure the command is written properly.');
+  console.log();
+}
+
+*/
