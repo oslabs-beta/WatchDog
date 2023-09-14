@@ -52,7 +52,6 @@ let counter = 0;
 
 let watchPods = true;
 let watchCPUFlag = true;
-//each pod to be watched, stick the pod name and treshold into an object with the properties 'name' and 'threshold'
 
 
 const podChecker = async () => {
@@ -109,7 +108,6 @@ intervalID = setInterval(async () => {
     
         async function getPodMetrics() {
         try {
-            // console.log('fs.readFile(path.resolve(__dirname, "../data/characters.json"), "UTF-8")', fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8"))
             const data = fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8", (err, data) => {
                 if (err) {
                   console.error('Error reading the file:', err);
@@ -185,12 +183,16 @@ const podCPUWatchDropDown = async (treshold) => {
     const res = await k8sApi.readNamespacedPod(answers['list commands'], pods[answers['list commands']]);
     const pod = res.body;
     const container = pod.spec.containers[0];
+    let max;
+    if (!container.resources.requests) {
+        max = 100000000;
+    } else max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000
+
     const jsonPod = JSON.stringify({
         name: answers['list commands'],
         namespace: pods[answers['list commands']],
         treshold: treshold,
-        max: Number(container.resources.requests.cpu.slice(0, -1)) * 1000000})
-    // podsCPUWatch.push({name: answers['list commands'], namespace: pods[answers['list commands']], treshold: treshold, max: Number(container.resources.requests.cpu.slice(0, -1)) * 1000000});
+        max: max}) 
     async function appendToFile(newObject) {
         const filePath = path.resolve(__dirname, "./podCPU.json");
         
@@ -203,49 +205,18 @@ const podCPUWatchDropDown = async (treshold) => {
             
               parsedData.push(newObject);
              
-            //   fs.writeFile(path.resolve(__dirname, "./podCPU.json"), JSON.stringify(parsedData, null, 2))
             fs.writeFile(filePath, JSON.stringify(parsedData), (err) => {
                 if (err) {
-                  console.error('Error writing to file:', err);
+                console.error('Error saving pod:', err);
                 } else {
-                  console.log('Successfully wrote to file');
+                console.log('Saved Pod!');
                 }
-              });
+            });
             }
           });
-  
-    
-        // Parse the JSON
-        // const json = JSON.parse(data);
-        //   console.log('data: ', data)
-        // Add the new data
-        // data.push(newObject);
-    
-        // Serialize it back to JSON and write to the file
-        // fs.writeFile(filePath, JSON.stringify(data, null, 2));
     }
     
     appendToFile(jsonPod);
-    
-    
-    // fs.appendFile(
-    //     path.resolve(__dirname, "./podCPU.json"),
-    //     jsonPod,
-    //     (err) => {
-    //         if (err) {
-    //           console.error('Error writing to file:', err);
-    //         } else {
-    //           console.log('Successfully wrote to file');
-    //         }
-    //       }
-    //   )
-//     fs.appendFile('./podCPU.json', jsonPod, (err) => {
-//   if (err) {
-//     console.error('Error writing to file:', err);
-//   } else {
-//     console.log('Successfully wrote to file');
-//   }
-// });
   });
 };
   
@@ -268,7 +239,6 @@ const api = kc.makeApiClient(k8s.KubernetesObjectApi);
 
 async function applyYaml(obj) {
     return new Promise((resolve) => {
-        // console.log('obj: ', obj)
         setTimeout(() => {
           api.create(obj);
           resolve();
@@ -371,7 +341,6 @@ async function  getPodResourcePercents(podName, namespace) {
         async function getPodMetrics() {
         try {
             const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
-            // console.log(names, 'metrics:', res.body.containers[0].usage);
             return {cpu: res.body.containers[0].usage.cpu, memory: res.body.containers[0].usage.memory}
             // process.exit();
         } catch (err) {
@@ -511,9 +480,7 @@ function printCommands() {
 		console.log(chalk.cyan(`${command.option}:`), command.description);
 	});
 }
-//added --wizard command like oliver suggested(now the new interactive prompt)
-//--help just shows the list of commands
-//--flags that are set to a number can act as second input for threshold, so add --cpu and --memory threshold(node)
+
 try {
   const args = arg({
     '--start': Boolean,
@@ -554,7 +521,6 @@ try {
 		getNodeUsage();
 	} else if (args['--podusage']) {
 		givePods();
-		// getPodUsage('kube-scheduler-minikube', 'kube-system');
 	} else if (args['--podpercent']) {
         podPercent();
     } else if (args['--help']) {
