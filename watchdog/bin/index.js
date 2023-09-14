@@ -352,9 +352,21 @@ async function  getPodResourcePercents(podName, namespace) {
       const { cpu, memory } = await currentUsage(podName, namespace)   
 
     const container = pod.spec.containers[0]
-    const totalMemory = Number(container.resources.requests.memory.slice(0, -2)) || 10000;
+    
+    let totalMemory;
+    if (!container.resources.requests) {
+        totalMemory = 10000
+    } else {totalMemory = Number(container.resources.requests.memory.slice(0, -2))};
+
+
+    let max;
+    if (!container.resources.requests) {
+        max = 100000000;
+    } else max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000
+   
+
     console.log(`Pod: ${container.name}`);
-    console.log(`Current CPU Usage: ${((Number(cpu.slice(0, -1)) / (Number(container.resources.requests.cpu.slice(0, -1)) * 1000000)) * 100).toFixed(2)}%`);
+    console.log(`Current CPU Usage: ${((Number(cpu.slice(0, -1)) / (max)) * 100).toFixed(2)}%`);
     console.log(`Current Memory Usage: ${((Number(memory.slice(0, -2)) / (totalMemory * 100)) * 100).toFixed(2)}%`);
     console.log('---');
     
