@@ -163,7 +163,7 @@
 | --podusage    | Displays metrics for a specific pod                    |
 | --podpercent  | Displays metric percent for a specific pod             |
 | --cpuwatch    | Sets a pod CPU usage alert threshold (note: include a number after a space after the flag) |
-| --watch       | Starts podwatch and whatever CPU metrics you chose  |
+| --watch       | Runs watchdog to provide pod crash, pod start, and CPU threshold alerts (set prior using --cpuwatch) |
 | --help        | Displays available commands                            |
 | --wizard      | Launches a help wizard                              |
 
