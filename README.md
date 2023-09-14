@@ -122,7 +122,6 @@
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- USAGE EXAMPLES -->
 ## Usage
 
@@ -132,15 +131,52 @@
    ```
       <img src="images/screenshot1.png" alt="Logo" width="300" height="auto">
 
-2. Provide real time crash notifications
+
+
+
+
+2. Set a CPU usage alert threshold for a pod
+   ```sh
+   watchdog --cpuwatch 70
+   ```
+   <img src="images/image.png" alt="Logo" width="300" height="auto">
+
+
+
+
+
+3. Provide crash alerts (as well as any CPU alerts set prior with --cpuwatch)
    ```sh
    watchdog --watch
    ```
-3. Get metrics for all pods
+
+
+
+4. Get metrics for all pods
    ```sh
    watchdog --metrics
    ```
-_For more examples, please refer to the [Documentation](https://example.com)_
+
+
+### Complete List of Commands
+
+| Command       | Description                                         |
+|---------------|-----------------------------------------------------|
+| --start       | Installs metric server                              |
+| --pods        | Displays all running pods                              |
+| --nodes       | Displays all running nodes                             |
+| --containers  | Displays all running containers                        |
+| --metrics     | Displays metrics for a specific pod                    |
+| --nodeusage   | Displays metrics for the one node                      |
+| --podusage    | Displays metrics for a specific pod                    |
+| --podpercent  | Displays metric percent for a specific pod             |
+| --cpuwatch    | Sets a pod CPU usage alert threshold (note: include a number after a space after the flag) |
+| --watch       | Starts podwatch and whatever CPU metrics you chose  |
+| --help        | Displays available commands                            |
+| --wizard      | Launches a help wizard                              |
+
+
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
