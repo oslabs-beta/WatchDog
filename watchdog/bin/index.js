@@ -383,10 +383,10 @@ async function getPodResourcePercents(podName, namespace) {
       const { cpu, memory } = await currentUsage(podName, namespace)   
 
     const container = pod.spec.containers[0]
-    const totalMemory = container.resources.requests.memory || 10000
+    const totalMemory = Number(container.resources.requests.memory.slice(0, -2)) || 10000;
     console.log(`Pod: ${container.name}`);
     console.log(`Current CPU Usage: ${((Number(cpu.slice(0, -1)) / (Number(container.resources.requests.cpu.slice(0, -1)) * 1000000)) * 100).toFixed(2)}%`);
-    console.log(`Current Memory Usage: ${(Number(memory.slice(0, -2)) / totalMemory).toFixed(2)}%`);
+    console.log(`Current Memory Usage: ${((Number(memory.slice(0, -2)) / (totalMemory * 100)) * 100).toFixed(2)}%`);
     console.log('---');
     
   } catch (err) {
@@ -439,11 +439,15 @@ const giveHelp = () => {
         name: 'list commands',
         message: 'What do you want to do?',
         choices: [
+          'Install Metrics Server',
           'Display running pods',
           'Display running nodes',
           'Display running containers',
           'Display current node CPU and memory usage',
+          'Display pod CPU and memory usage',
+          'Display pod CPU and memory percentage',
           'Display valid commands',
+          'Watch pods',
           new inquirer.Separator(),
           'Other potential options...',
         ],
@@ -451,6 +455,9 @@ const giveHelp = () => {
     ])
     .then((answers) => {
       for (const key in answers) {
+        if (answers[key] === 'Install Metrics Server') {
+            metricServerInstaller();
+        }
         if (answers[key] === 'Display running pods') {
           getPods();
         }
@@ -462,6 +469,16 @@ const giveHelp = () => {
         }
         if (answers[key] === 'Display current node CPU and memory usage') {
           getNodeUsage();
+        }
+        if (answers[key] === 'Display pod CPU and memory usage') {
+            getPodMetric();
+          }
+        if (answers[key] === 'Display pod CPU and memory percentage') {
+            podPercent();
+        }
+        if (answers[key] === 'Watch pods') {
+            podChecker();
+		    setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
         }
         if (answers[key] === 'Display valid commands') {
             printCommands();
