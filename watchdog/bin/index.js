@@ -353,7 +353,7 @@ const promptForCommand = () => {
     });
 };
 
-async function getPodResourcePercents(podName, namespace) {
+async function  getPodResourcePercents(podName, namespace) {
   try {
     const res = await k8sApi.readNamespacedPod(podName, namespace);
     const pod = res.body;
@@ -400,13 +400,12 @@ const podPercent = async () => {
     kc.loadFromDefault();
     const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
 
-    const pods = await k8sApi.listPodForAllNamespaces().then((res) => {
-      
+  const pods = await k8sApi.listPodForAllNamespaces()
+    .then((res) => {
       const podArray = {};
       res.body.items.forEach((pod) => {
          podArray[pod.metadata.name] = pod.metadata.namespace
         });
-    
       return podArray
   }).then((pods) => {
         return pods})
@@ -502,6 +501,8 @@ const validCommands = [
 		description: 'Display current node CPU and memory usage',
 	},
 	{ option: '--podusage', description: 'Display pod usage' },
+	{ option: '--podpercent', description: 'choose a pod to display CPU % ' },
+	{ option: '--cpuwatch', description: 'set a threshold for pod cpu' },
 ];
 
 function printCommands() {
@@ -512,6 +513,7 @@ function printCommands() {
 }
 //added --wizard command like oliver suggested(now the new interactive prompt)
 //--help just shows the list of commands
+//--flags that are set to a number can act as second input for threshold, so add --cpu and --memory threshold(node)
 try {
   const args = arg({
     '--start': Boolean,
@@ -537,7 +539,7 @@ try {
 		metricServerInstaller();
 	} else if (args['--pods']) {
 		getPods();
-	} else if (args['--nodes']) {
+    } else if (args['--nodes']) {
 		getNodes();
 	} else if (args['--containers']) {
 		getContainers();
