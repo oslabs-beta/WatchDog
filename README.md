@@ -21,10 +21,10 @@
 <br />
 <div align="center">
   <a href="https://github.com/WatchDogCLI/WatchDog">
-    <img src="images/logo.png" alt="Logo" width="200" height="200">
+    <img src="images/logo.png" alt="Logo" height="200">
   </a>
 
-<h3 align="center">WatchdogCLI</h3>
+<h3 align="center">WatchDogCLI</h3>
 
   <p align="center">
     Simple, custom command line monitoring for local kubernetes development. 
@@ -58,7 +58,6 @@
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
@@ -68,26 +67,25 @@
 
 
 
-<!-- ABOUT THE PROJECT -->
+<!-- ABOUT THE PROJECT
 ## About The Project
 
 [![Product Name Screen Shot][product-screenshot]](https://example.com)
 
 <!-- Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor for the following: `WatchDogCLI`, `WatchDog`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description` -->
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
+<!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> --> 
 
 ### Built With
 
 * [![Minikube][]][Minikube-url]
 * [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
+<!-- * [![Vue][Vue.js]][Vue-url]
 * [![Angular][Angular.io]][Angular-url]
 * [![Svelte][Svelte.dev]][Svelte-url]
 * [![Laravel][Laravel.com]][Laravel-url]
 * [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
+* [![JQuery][JQuery.com]][JQuery-url] -->
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -114,6 +112,7 @@
    ```sh
    npm install watchdogcli
    ```
+
 2. Configure local metrics server
    ```sh
    watchdog --start
@@ -132,9 +131,6 @@
       <img src="images/screenshot1.png" alt="Logo" width="300" height="auto">
 
 
-
-
-
 2. Set a CPU usage alert threshold for a pod
    ```sh
    watchdog --cpuwatch 70
@@ -142,14 +138,10 @@
    <img src="images/image.png" alt="Logo" width="300" height="auto">
 
 
-
-
-
 3. Provide crash alerts (as well as any CPU alerts set prior with --cpuwatch)
    ```sh
    watchdog --watch
    ```
-
 
 
 4. Get metrics for all pods
@@ -176,23 +168,16 @@
 | --wizard      | Launches a help wizard                              |
 
 
-
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
-<!-- ROADMAP -->
+<!-- ROADMAP
 ## Roadmap
 
 - [ ] Feature 1
 - [ ] Feature 2
 - [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/WatchDogCLI/WatchDog/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+    - [ ] Nested Feature -->
 
 
 
@@ -210,6 +195,8 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+See the [open issues](https://github.com/WatchDogCLI/WatchDog/issues) for a full list of proposed features (and known issues).
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
@@ -226,7 +213,10 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Ajax Abernathy - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Arjun V - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Jerry Perez - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Oliver Wendell-Braly - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
 
 Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/WatchDogCLI/WatchDog)
 
