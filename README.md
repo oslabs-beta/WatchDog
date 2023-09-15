@@ -213,10 +213,13 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Ajax Abernathy - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-Arjun V - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-Jerry Perez - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-Oliver Wendell-Braly - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Ajax Abernathy - [@linkedIn](https://www.linkedin.com/in/ajax-abernathy/)
+
+Arjun V - [@linkedIn](www.linkedin.com/in/arjunvi) 
+
+Jerry Perez - [@linkedIn](https://twitter.com/twitter_handle) 
+
+Oliver Wendell-Braly - [@linkedIn](https://www.linkedin.com/in/oliverbraly/)
 
 Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/WatchDogCLI/WatchDog)
 
@@ -224,14 +227,14 @@ Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/Watch
 
 
 
-<!-- ACKNOWLEDGMENTS -->
+<!-- ACKNOWLEDGMENTS
 ## Acknowledgments
 
 * []()
 * []()
-* []()
+* []() -->
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<!-- <p align="right">(<a href="#readme-top">back to top</a>)</p> -->
 
 
 
