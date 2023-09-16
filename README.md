@@ -217,11 +217,13 @@ Ajax Abernathy - [@linkedIn](https://www.linkedin.com/in/ajax-abernathy/)
 
 Arjun V - [@linkedIn](www.linkedin.com/in/arjunvi) 
 
-Jerry Perez - [@linkedIn](https://twitter.com/twitter_handle) 
+Jerry Perez - [@linkedIn](www.linkedin.com/in/jerry-perez-cs) 
 
 Oliver Wendell-Braly - [@linkedIn](https://www.linkedin.com/in/oliverbraly/)
 
-Project Link: [https://github.com/WatchDogCLI/WatchDog](https://github.com/WatchDogCLI/WatchDog)
+Project Link: [https://github.com/oslabs-beta/WatchDog](https://github.com/oslabs-beta/WatchDog)
+
+Team Website: [https://www.getwatchdog.io](https://www.getwatchdog.io/)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
