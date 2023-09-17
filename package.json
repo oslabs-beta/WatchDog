@@ -11,7 +11,7 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/WatchDogCLI/WatchDog.git"
+    "url": "https://github.com/oslabs-beta/WatchDog"
   },
   "dependencies": {
     "watchdogcli": "^1.0.0"
