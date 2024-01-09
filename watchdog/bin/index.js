@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const logger = require('../src/logger.js');
 const configuredLogger = logger('bin');
-const arg = require('arg')
+const arg = require('arg');
 const getConfig = require('../src/config/config-mgr.js');
 const start = require('../src/commands/start.js');
 const express = require('express');
@@ -10,7 +10,7 @@ const fs = require('fs');
 const k8s = require('@kubernetes/client-node');
 const fetch = require('node-fetch');
 const yaml = require('js-yaml');
-const path = require("path");
+const path = require('path');
 const readline = require('readline');
 const colors = require('colors');
 const getPods = require('./getPods.js');
@@ -19,9 +19,9 @@ const getContainers = require('./getContainers.js');
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 const log = console.log;
-const getNodeUsage = require('./nodeUsage.js') 
-const givePods = require('./podDropdown.js')
-const getPodUsage = require('./podUsage.js')
+const getNodeUsage = require('./nodeUsage.js');
+const givePods = require('./podDropdown.js');
+const getPodUsage = require('./podUsage.js');
 
 //for DEBUG console.logs send string to 'configuredLogger.debug('strings', 'here')'
 //show DEBUG logs with 'DEBUG=* watchdog --start'
@@ -33,18 +33,17 @@ const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 
-
 let intervalID;
 
 const localStorage = [];
 
 const dbPull = () => {
-return localStorage;
-}
+  return localStorage;
+};
 
 const dbAdd = (podname) => {
-localStorage.push({name: podname})
-}
+  localStorage.push({ name: podname });
+};
 
 let interval = 1000;
 
@@ -53,173 +52,203 @@ let counter = 0;
 let watchPods = true;
 let watchCPUFlag = true;
 
-
 const podChecker = async () => {
-intervalID = setInterval(async () => {
+  intervalID = setInterval(async () => {
     const currentPods = dbPull();
     async function managePods() {
-        try {
+      try {
         // Fetch all the pods
         const res = await k8sApi.listPodForAllNamespaces();
-        
+
         const nameArray = [];
-        
+        const addedPods = [];
+
         res.body.items.forEach((pod) => {
-            nameArray.push(pod.metadata.name);
-            
-            let found = false;
-            for (let i = 0; i < currentPods.length; i++) {
+          nameArray.push(pod.metadata.name);
+
+          let found = false;
+          for (let i = 0; i < currentPods.length; i++) {
             if (currentPods[i].name === pod.metadata.name) {
-                found = true;
+              found = true;
             }
-            }
-            
-            if (!found) {
+          }
+
+          if (!found) {
             dbAdd(pod.metadata.name);
             if (counter > 0) {
-                console.log(`Added ${pod.metadata.name} to cluster`.green);
+              // console.log(`Added ${pod.metadata.name} to cluster`.green);
+              addedPods.push(pod.metadata.name);
             }
-            }
+          }
         });
-        
+
         counter++;
-        
+
         // Checking for crashed pods
         for (let i = 0; i < currentPods.length; i++) {
-            if (!nameArray.includes(currentPods[i].name)) {
+          if (!nameArray.includes(currentPods[i].name)) {
             console.log(`${currentPods[i].name} has crashed!`.red);
             localStorage.splice(i, 1);
-            }
+          }
         }
-        
-        
-        } catch (err) {
+        // Log added pods
+        if (addedPods.length) {
+          addedPods.forEach((pod) => {
+            console.log(`Added ${pod} to cluster`.green);
+          });
+        }
+      } catch (err) {
         console.error('Error:', err);
-        }
+      }
     }
 
     const watchCPU = () => {
-        const kc = new k8s.KubeConfig();
-        kc.loadFromDefault();
-        const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
-        const group = 'metrics.k8s.io';
-        const version = 'v1beta1';
-        const plural = 'pods';
-    
-        async function getPodMetrics() {
+      const kc = new k8s.KubeConfig();
+      kc.loadFromDefault();
+      const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
+      const group = 'metrics.k8s.io';
+      const version = 'v1beta1';
+      const plural = 'pods';
+
+      async function getPodMetrics() {
         try {
-            const data = fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8", (err, data) => {
-                if (err) {
-                  console.error('Error reading the file:', err);
-                } else {
-                  const parsedData = JSON.parse(data);
-                  parsedData.forEach(async (pod) => {
-                    const { name, namespace, treshold, max } = JSON.parse(pod);
-                
-                    const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
-                    
-                    if ((Number(res.body.containers[0].usage.cpu.slice(0, -1))/ max) * 100 > treshold) {
-                        console.log(`${name} has exceeded the treshold of ${treshold}%`)
-                    }
+          const data = fs.readFile(
+            path.resolve(__dirname, './podCPU.json'),
+            'UTF-8',
+            (err, data) => {
+              if (err) {
+                console.error('Error reading the file:', err);
+              } else {
+                const parsedData = JSON.parse(data);
+                parsedData.forEach(async (pod) => {
+                  const { name, namespace, treshold, max } = JSON.parse(pod);
 
+                  const res = await k8sApi.getNamespacedCustomObject(
+                    group,
+                    version,
+                    namespace,
+                    plural,
+                    name
+                  );
 
-                  })
-                }
-              });
-      
+                  if (
+                    (Number(res.body.containers[0].usage.cpu.slice(0, -1)) /
+                      max) *
+                      100 >
+                    treshold
+                  ) {
+                    console.log(
+                      `${name} has exceeded the treshold of ${treshold}%`
+                    );
+                  }
+                });
+              }
+            }
+          );
         } catch (err) {
-            console.error('Error fetching metrics:', err);
-            process.exit();
-        }}
-       getPodMetrics();
+          console.error('Error fetching metrics:', err);
+          process.exit();
+        }
+      }
+      getPodMetrics();
     };
-    
+
     // Call the function
     if (watchPods) {
-        managePods();
-    };
+      managePods();
+    }
     if (watchCPUFlag) {
-        watchCPU();
-    };
+      watchCPU();
+    }
 
     promptForCommand();
-
-    }, interval)
+  }, interval);
 };
 
 const stopPodCheck = () => {
-    clearInterval(intervalID);
+  clearInterval(intervalID);
 };
 
 const podCPUWatchDropDown = async (treshold) => {
-    const kc = new k8s.KubeConfig();
-    kc.loadFromDefault();
-    const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
+  const kc = new k8s.KubeConfig();
+  kc.loadFromDefault();
+  const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 
-    const pods = await k8sApi.listPodForAllNamespaces().then((res) => {
-      
+  const pods = await k8sApi
+    .listPodForAllNamespaces()
+    .then((res) => {
       const podArray = {};
       res.body.items.forEach((pod) => {
-         podArray[pod.metadata.name] = pod.metadata.namespace
-        });
-    
-      return podArray
-  }).then((pods) => {
-        return pods})
-  .catch((err) => {
+        podArray[pod.metadata.name] = pod.metadata.namespace;
+      });
+
+      return podArray;
+    })
+    .then((pods) => {
+      return pods;
+    })
+    .catch((err) => {
       console.error('Error:', err);
-  }); 
+    });
 
   inquirer
-  .prompt([
-    {
-      type: 'rawlist',
-      name: 'list commands',
-      message: 'Select a pod:',
-      choices: [...Object.keys(pods), new inquirer.Separator()]
-    },
-  ])
-  .then(async (answers) => {
-    const res = await k8sApi.readNamespacedPod(answers['list commands'], pods[answers['list commands']]);
-    const pod = res.body;
-    const container = pod.spec.containers[0];
-    let max;
-    if (!container.resources.requests) {
+    .prompt([
+      {
+        type: 'rawlist',
+        name: 'list commands',
+        message: 'Select a pod:',
+        choices: [...Object.keys(pods), new inquirer.Separator()],
+      },
+    ])
+    .then(async (answers) => {
+      const res = await k8sApi.readNamespacedPod(
+        answers['list commands'],
+        pods[answers['list commands']]
+      );
+      const pod = res.body;
+      const container = pod.spec.containers[0];
+      let max;
+      if (!container.resources.requests) {
         max = 100000000;
-    } else max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000
+      } else
+        max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000;
 
-    const jsonPod = JSON.stringify({
+      const jsonPod = JSON.stringify({
         name: answers['list commands'],
         namespace: pods[answers['list commands']],
         treshold: treshold,
-        max: max}) 
-    async function appendToFile(newObject) {
-        const filePath = path.resolve(__dirname, "./podCPU.json");
-        
+        max: max,
+      });
+      async function appendToFile(newObject) {
+        const filePath = path.resolve(__dirname, './podCPU.json');
+
         // Read the existing file
-        const data = fs.readFile(path.resolve(__dirname, "./podCPU.json"), "UTF-8", (err, data) => {
+        const data = fs.readFile(
+          path.resolve(__dirname, './podCPU.json'),
+          'UTF-8',
+          (err, data) => {
             if (err) {
               console.error('Error reading the file:', err);
             } else {
               const parsedData = JSON.parse(data);
-            
+
               parsedData.push(newObject);
-             
-            fs.writeFile(filePath, JSON.stringify(parsedData), (err) => {
+
+              fs.writeFile(filePath, JSON.stringify(parsedData), (err) => {
                 if (err) {
-                console.error('Error saving pod:', err);
+                  console.error('Error saving pod:', err);
                 } else {
-                console.log('Saved Pod!');
+                  console.log('Saved Pod!');
                 }
-            });
+              });
             }
-          });
-    }
-    
-    appendToFile(jsonPod);
-  });
+          }
+        );
+      }
+
+      appendToFile(jsonPod);
+    });
 };
-  
 
 //METRICS SERVER
 
@@ -227,10 +256,12 @@ async function checkMetricsServer() {
   const api = kc.makeApiClient(k8s.ApisApi);
   try {
     const result = await api.getAPIVersions();
-    const metricsAPI = result.body.groups.find(group => group.name === 'metrics.k8s.io');
+    const metricsAPI = result.body.groups.find(
+      (group) => group.name === 'metrics.k8s.io'
+    );
     return Boolean(metricsAPI);
   } catch (error) {
-    console.error("Failed to retrieve API groups:", error);
+    console.error('Failed to retrieve API groups:', error);
     return false;
   }
 }
@@ -238,23 +269,27 @@ async function checkMetricsServer() {
 const api = kc.makeApiClient(k8s.KubernetesObjectApi);
 
 async function applyYaml(obj) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-          api.create(obj);
-          resolve();
-        }, 1000);
-      });
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      api.create(obj);
+      resolve();
+    }, 1000);
+  });
 }
 
 async function installMetricsServer() {
   try {
-    const manifest = yaml.loadAll(fs.readFileSync(path.resolve(__dirname, './../high-availability-1.21+.yaml'), 'utf8'));
+    const manifest = yaml.loadAll(
+      fs.readFileSync(
+        path.resolve(__dirname, './../high-availability-1.21+.yaml'),
+        'utf8'
+      )
+    );
     for (const obj of manifest) {
-        await applyYaml(obj)
+      await applyYaml(obj);
     }
     console.log('Metrics Server installed successfully.');
     setTimeout(() => process.exit(), 1000);
-
   } catch (err) {
     console.error('Failed to install Metrics Server:', err);
   }
@@ -263,14 +298,13 @@ async function installMetricsServer() {
 const metricServerInstaller = async () => {
   const isMetricsServerInstalled = await checkMetricsServer();
   if (isMetricsServerInstalled) {
-    console.log("Metrics Server already installed.");
+    console.log('Metrics Server already installed.');
     process.exit();
   } else {
-    console.log("Metrics Server is not installed. Installing now...");
+    console.log('Metrics Server is not installed. Installing now...');
     await installMetricsServer();
   }
 };
-
 
 const metricsAPI = 'apis/metrics.k8s.io/v1beta1';
 
@@ -278,8 +312,8 @@ async function getPodMetric(namespace = 'kube-system') {
   try {
     const customObjectsApi = kc.makeApiClient(k8s.CustomObjectsApi);
     const res = await k8sApi.listNamespacedPod(namespace);
-    
-    const podNames = res.body.items.map(pod => pod.metadata.name);
+
+    const podNames = res.body.items.map((pod) => pod.metadata.name);
     for (const podName of podNames) {
       const { body } = await customObjectsApi.getNamespacedCustomObject(
         'metrics.k8s.io',
@@ -288,7 +322,7 @@ async function getPodMetric(namespace = 'kube-system') {
         'pods',
         podName
       );
-      
+
       console.log(`Metrics for pod ${podName}: `, body.containers[0].usage);
     }
     process.exit();
@@ -298,78 +332,100 @@ async function getPodMetric(namespace = 'kube-system') {
   }
 }
 
-
 const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+  input: process.stdin,
+  output: process.stdout,
+});
 
 const promptForCommand = () => {
-    rl.question('> ', (command) => {
-        switch (command.length >= 0) {
-        case true:
-            stopPodCheck();
-            console.log('Watchdog is taking a break from pod watching');
-            fs.writeFileSync(path.resolve(__dirname, "./podCPU.json"), JSON.stringify([]), (err) => {
-                if (err) {
-                  console.error('Error clearing file:', err);
-                } 
-              });
-            process.exit();
-            return;
-        default:
-            console.log('Unknown command. Type "help" for available commands.');
-        }
-    });
+  rl.question('> ', (command) => {
+    switch (command.length >= 0) {
+      case true:
+        stopPodCheck();
+        console.log('Watchdog is taking a break from pod watching');
+        fs.writeFileSync(
+          path.resolve(__dirname, './podCPU.json'),
+          JSON.stringify([]),
+          (err) => {
+            if (err) {
+              console.error('Error clearing file:', err);
+            }
+          }
+        );
+        process.exit();
+        return;
+      default:
+        console.log('Unknown command. Type "help" for available commands.');
+    }
+  });
 };
 
-async function  getPodResourcePercents(podName, namespace) {
+async function getPodResourcePercents(podName, namespace) {
   try {
     const res = await k8sApi.readNamespacedPod(podName, namespace);
     const pod = res.body;
 
     const currentUsage = async (names, namespaces) => {
-        const kc = new k8s.KubeConfig();
-        kc.loadFromDefault();
-        const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
-        const group = 'metrics.k8s.io';
-        const version = 'v1beta1';
-        const namespace = namespaces; // Replace with your namespace
-        const plural = 'pods';
-        const name = names; // Replace with your pod name
-    
-        async function getPodMetrics() {
-        try {
-            const res = await k8sApi.getNamespacedCustomObject(group, version, namespace, plural, name);
-            return {cpu: res.body.containers[0].usage.cpu, memory: res.body.containers[0].usage.memory}
-            // process.exit();
-        } catch (err) {
-            console.error('Error fetching metrics:', err);
-            process.exit();
-        }}
-       return getPodMetrics();
-      }; 
-      const { cpu, memory } = await currentUsage(podName, namespace)   
+      const kc = new k8s.KubeConfig();
+      kc.loadFromDefault();
+      const k8sApi = kc.makeApiClient(k8s.CustomObjectsApi);
+      const group = 'metrics.k8s.io';
+      const version = 'v1beta1';
+      const namespace = namespaces; // Replace with your namespace
+      const plural = 'pods';
+      const name = names; // Replace with your pod name
 
-    const container = pod.spec.containers[0]
-    
+      async function getPodMetrics() {
+        try {
+          const res = await k8sApi.getNamespacedCustomObject(
+            group,
+            version,
+            namespace,
+            plural,
+            name
+          );
+          return {
+            cpu: res.body.containers[0].usage.cpu,
+            memory: res.body.containers[0].usage.memory,
+          };
+          // process.exit();
+        } catch (err) {
+          console.error('Error fetching metrics:', err);
+          process.exit();
+        }
+      }
+      return getPodMetrics();
+    };
+    const { cpu, memory } = await currentUsage(podName, namespace);
+
+    const container = pod.spec.containers[0];
+
     let totalMemory;
     if (!container.resources.requests) {
-        totalMemory = 10000
-    } else {totalMemory = Number(container.resources.requests.memory.slice(0, -2))};
-
+      totalMemory = 10000;
+    } else {
+      totalMemory = Number(container.resources.requests.memory.slice(0, -2));
+    }
 
     let max;
     if (!container.resources.requests) {
-        max = 100000000;
-    } else max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000
-   
+      max = 100000000;
+    } else
+      max = Number(container.resources.requests.cpu.slice(0, -1)) * 1000000;
 
     console.log(`Pod: ${container.name}`);
-    console.log(`Current CPU Usage: ${((Number(cpu.slice(0, -1)) / (max)) * 100).toFixed(2)}%`);
-    console.log(`Current Memory Usage: ${((Number(memory.slice(0, -2)) / (totalMemory * 100)) * 100).toFixed(2)}%`);
+    console.log(
+      `Current CPU Usage: ${((Number(cpu.slice(0, -1)) / max) * 100).toFixed(
+        2
+      )}%`
+    );
+    console.log(
+      `Current Memory Usage: ${(
+        (Number(memory.slice(0, -2)) / (totalMemory * 100)) *
+        100
+      ).toFixed(2)}%`
+    );
     console.log('---');
-    
   } catch (err) {
     console.error('Error fetching pod info:', err);
   }
@@ -377,38 +433,42 @@ async function  getPodResourcePercents(podName, namespace) {
 
 // POD PERCENT WITH DROP DOWN
 const podPercent = async () => {
-    const kc = new k8s.KubeConfig();
-    kc.loadFromDefault();
-    const k8sApi = kc.makeApiClient(k8s.CoreV1Api); 
+  const kc = new k8s.KubeConfig();
+  kc.loadFromDefault();
+  const k8sApi = kc.makeApiClient(k8s.CoreV1Api);
 
-  const pods = await k8sApi.listPodForAllNamespaces()
+  const pods = await k8sApi
+    .listPodForAllNamespaces()
     .then((res) => {
       const podArray = {};
       res.body.items.forEach((pod) => {
-         podArray[pod.metadata.name] = pod.metadata.namespace
-        });
-      return podArray
-  }).then((pods) => {
-        return pods})
-  .catch((err) => {
+        podArray[pod.metadata.name] = pod.metadata.namespace;
+      });
+      return podArray;
+    })
+    .then((pods) => {
+      return pods;
+    })
+    .catch((err) => {
       console.error('Error:', err);
-  }); 
+    });
 
   inquirer
-  .prompt([
-    {
-      type: 'rawlist',
-      name: 'list commands',
-      message: 'Select a pod:',
-      choices: [...Object.keys(pods), new inquirer.Separator()]
-    },
-  ])
-  .then((answers) => {
-    getPodResourcePercents(answers['list commands'], pods[answers['list commands']])
-  });
-
+    .prompt([
+      {
+        type: 'rawlist',
+        name: 'list commands',
+        message: 'Select a pod:',
+        choices: [...Object.keys(pods), new inquirer.Separator()],
+      },
+    ])
+    .then((answers) => {
+      getPodResourcePercents(
+        answers['list commands'],
+        pods[answers['list commands']]
+      );
+    });
 };
-  
 
 // GIVE HELP TO USER
 const giveHelp = () => {
@@ -436,7 +496,7 @@ const giveHelp = () => {
     .then((answers) => {
       for (const key in answers) {
         if (answers[key] === 'Install Metrics Server') {
-            metricServerInstaller();
+          metricServerInstaller();
         }
         if (answers[key] === 'Display running pods') {
           getPods();
@@ -451,17 +511,17 @@ const giveHelp = () => {
           getNodeUsage();
         }
         if (answers[key] === 'Display pod CPU and memory usage') {
-            getPodMetric();
-          }
+          getPodMetric();
+        }
         if (answers[key] === 'Display pod CPU and memory percentage') {
-            podPercent();
+          podPercent();
         }
         if (answers[key] === 'Watch pods') {
-            podChecker();
-		    setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
+          podChecker();
+          setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
         }
         if (answers[key] === 'Display valid commands') {
-            printCommands();
+          printCommands();
         }
       }
     });
@@ -469,28 +529,28 @@ const giveHelp = () => {
 
 //list of valid commands
 const validCommands = [
-	{ option: '--start', description: 'Starts the app' },
-	{ option: '--wizard', description: 'Displays interactive CL prompt!' },
-	{ option: '--pods', description: 'Displays running pods' },
-	{ option: '--nodes', description: 'Displays running nodes' },
-	{ option: '--containers', description: 'Displays running containers' },
-	{ option: '--watch', description: 'Watch pods' },
-	{ option: '--metrics', description: 'Get pod metrics' },
-	{ option: '--help', description: 'Show available commands' },
-	{
-		option: '--nodeusage',
-		description: 'Display current node CPU and memory usage',
-	},
-	{ option: '--podusage', description: 'Display pod usage' },
-	{ option: '--podpercent', description: 'choose a pod to display CPU % ' },
-	{ option: '--cpuwatch', description: 'set a threshold for pod cpu' },
+  { option: '--start', description: 'Starts the app' },
+  { option: '--wizard', description: 'Displays interactive CL prompt!' },
+  { option: '--pods', description: 'Displays running pods' },
+  { option: '--nodes', description: 'Displays running nodes' },
+  { option: '--containers', description: 'Displays running containers' },
+  { option: '--watch', description: 'Watch pods' },
+  { option: '--metrics', description: 'Get pod metrics' },
+  { option: '--help', description: 'Show available commands' },
+  {
+    option: '--nodeusage',
+    description: 'Display current node CPU and memory usage',
+  },
+  { option: '--podusage', description: 'Display pod usage' },
+  { option: '--podpercent', description: 'choose a pod to display CPU % ' },
+  { option: '--cpuwatch', description: 'set a threshold for pod cpu' },
 ];
 
 function printCommands() {
-	console.log(chalk.cyan('List of Valid Commands: watchdog '));
-	validCommands.forEach((command) => {
-		console.log(chalk.cyan(`${command.option}:`), command.description);
-	});
+  console.log(chalk.cyan('List of Valid Commands: watchdog '));
+  validCommands.forEach((command) => {
+    console.log(chalk.cyan(`${command.option}:`), command.description);
+  });
 }
 
 try {
@@ -506,48 +566,50 @@ try {
     '--nodeusage': Boolean,
     '--podusage': Boolean,
     '--podpercent': Boolean,
-    '--cpuwatch': Number
+    '--cpuwatch': Number,
   });
 
-	configuredLogger.debug('Received args', args);
+  configuredLogger.debug('Received args', args);
 
-    if (args['--start']) {
-		// const config = getConfig();
-		// start(config);
-		console.log('Checking for Metrics Server...');
-		metricServerInstaller();
-	} else if (args['--pods']) {
-		getPods();
-    } else if (args['--nodes']) {
-		getNodes();
-	} else if (args['--containers']) {
-		getContainers();
-	} else if (args['--watch']) {
-		podChecker();
-		setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
-	} else if (args['--metrics']) {
-		getPodMetric();
-	} else if (args['--wizard']) {
-		giveHelp();
-	} else if (args['--nodeusage']) {
-		getNodeUsage();
-	} else if (args['--podusage']) {
-		givePods();
-	} else if (args['--podpercent']) {
-        podPercent();
-    } else if (args['--help']) {
-		printCommands();
-		process.exit();
-	} else if (args['--cpuwatch']) {
-        podCPUWatchDropDown(args['--cpuwatch'])
-		// printCommands();
-		// process.exit();
-	} else {
-		log('Invalid command. Type in "watchdog --help" for a list of valid commands.');
-		process.exit();
-	}
+  if (args['--start']) {
+    // const config = getConfig();
+    // start(config);
+    console.log('Checking for Metrics Server...');
+    metricServerInstaller();
+  } else if (args['--pods']) {
+    getPods();
+  } else if (args['--nodes']) {
+    getNodes();
+  } else if (args['--containers']) {
+    getContainers();
+  } else if (args['--watch']) {
+    podChecker();
+    setTimeout(() => console.log('Press Enter to stop watching.'), 1500);
+  } else if (args['--metrics']) {
+    getPodMetric();
+  } else if (args['--wizard']) {
+    giveHelp();
+  } else if (args['--nodeusage']) {
+    getNodeUsage();
+  } else if (args['--podusage']) {
+    givePods();
+  } else if (args['--podpercent']) {
+    podPercent();
+  } else if (args['--help']) {
+    printCommands();
+    process.exit();
+  } else if (args['--cpuwatch']) {
+    podCPUWatchDropDown(args['--cpuwatch']);
+    // printCommands();
+    // process.exit();
+  } else {
+    log(
+      'Invalid command. Type in "watchdog --help" for a list of valid commands.'
+    );
+    process.exit();
+  }
 } catch (e) {
-	configuredLogger.warning('Please make sure command is written properly.');
-	log();
-	process.exit();
+  configuredLogger.warning('Please make sure command is written properly.');
+  log();
+  process.exit();
 }
